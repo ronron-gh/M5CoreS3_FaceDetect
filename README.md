@@ -1,7 +1,10 @@
-# M5CoreS3_CameraTest
-M5Stack CoreS3の内蔵カメラでキャプチャした画像をLCDに表示するテストプログラム。
+# M5CoreS3_FaceDetect
+M5Stack CoreS3の内蔵カメラで顔検出するテストプログラム。  
+フレームワークのexampleにあるCameraWebServerの顔検出部分のコードを切り出して使っています。
 
-[mongonta0716](https://github.com/mongonta0716)さんの[M5CoreS3_HelloWorld](https://github.com/mongonta0716/M5CoreS3_HelloWorld/tree/master)をベースにしています。
+フレームワークのexampleはここに保存されています（Windows10の場合）。  
+C:\Users\\(ユーザ名)\\.platformio\packages\framework-arduinoespressif32\libraries\ESP32\examples
+
 
 ## 開発環境
 VSCode + PlatformIO
