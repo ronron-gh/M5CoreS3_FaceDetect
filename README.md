@@ -12,3 +12,13 @@ VSCode + PlatformIO
 ## ライブラリ
 * M5Unified
 * esp32-camera
+
+## メモリ使用量
+顔検出を追加することによるメモリ使用量の増分は次の通り。
+
+- ビルド結果  
+  - RAM：10kB増（グローバル変数などのstatic領域）
+  - Flash：680kB増（プログラム、定数）
+- 実行時ヒープ使用量
+  - RAM：17kB増
+  - PSRAM：増減なし
