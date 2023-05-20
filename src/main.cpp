@@ -65,6 +65,18 @@ esp_err_t camera_init(){
     return ESP_OK;
 }
 
+void check_heap_free_size(void){
+  Serial.printf("===============================================================\n");
+  Serial.printf("Mem Test\n");
+  Serial.printf("===============================================================\n");
+  Serial.printf("esp_get_free_heap_size()                              : %6d\n", esp_get_free_heap_size() );
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DMA)               : %6d\n", heap_caps_get_free_size(MALLOC_CAP_DMA) );
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_SPIRAM)            : %6d\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM) );
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_INTERNAL)          : %6d\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL) );
+  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DEFAULT)           : %6d\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT) );
+
+}
+
 
 
 #define FACE_COLOR_WHITE  0x00FFFFFF
@@ -98,8 +110,17 @@ static void draw_face_boxes(fb_data_t *fb, std::list<dl::detect::result_t> *resu
         // rectangle box
         x = (int)prediction->box[0];
         y = (int)prediction->box[1];
+
+        // yが負の数のときにfb_gfx_drawFastHLine()でメモリ破壊してリセットする不具合の対策
+        if(y < 0){
+           y = 0;
+        }
+
         w = (int)prediction->box[2] - x + 1;
         h = (int)prediction->box[3] - y + 1;
+
+        //Serial.printf("x:%d y:%d w:%d h:%d\n", x, y, w, h);
+
         if((x + w) > fb->width){
             w = fb->width - x;
         }
@@ -107,14 +128,13 @@ static void draw_face_boxes(fb_data_t *fb, std::list<dl::detect::result_t> *resu
             h = fb->height - y;
         }
 
-        //fb_gfx_fillRect(fb, x+10, y+10, w-20, h-20, FACE_COLOR_RED);  //モザイク
+        //Serial.printf("x:%d y:%d w:%d h:%d\n", x, y, w, h);
 
+        //fb_gfx_fillRect(fb, x+10, y+10, w-20, h-20, FACE_COLOR_RED);  //モザイク
         fb_gfx_drawFastHLine(fb, x, y, w, color);
         fb_gfx_drawFastHLine(fb, x, y + h - 1, w, color);
         fb_gfx_drawFastVLine(fb, x, y, h, color);
         fb_gfx_drawFastVLine(fb, x + w - 1, y, h, color);
-
-
 
 #if TWO_STAGE
         // landmarks (left eye, mouth left, nose, right eye, mouth right)
@@ -139,6 +159,7 @@ esp_err_t camera_capture_and_face_detect(){
     return ESP_FAIL;
   }
 
+
   int face_id = 0;
 
 #if TWO_STAGE
@@ -151,6 +172,8 @@ esp_err_t camera_capture_and_face_detect(){
   std::list<dl::detect::result_t> &results = s1.infer((uint16_t *)fb->buf, {(int)fb->height, (int)fb->width, 3});
 #endif
   if (results.size() > 0) {
+      //Serial.printf("Face detected : %d\n", results.size());
+
       fb_data_t rfb;
       rfb.width = fb->width;
       rfb.height = fb->height;
@@ -161,6 +184,7 @@ esp_err_t camera_capture_and_face_detect(){
       draw_face_boxes(&rfb, &results, face_id);
   }
 
+
   //replace this with your own function
   //process_image(fb->width, fb->height, fb->format, fb->buf, fb->len);
   M5.Display.startWrite();
@@ -168,8 +192,14 @@ esp_err_t camera_capture_and_face_detect(){
   M5.Display.writePixels((uint16_t*)fb->buf, int(fb->len / 2));
   M5.Display.endWrite();
   
+  //Serial.println("<heap size before fb return>");  
+  //check_heap_free_size();
+
   //return the frame buffer back to the driver for reuse
   esp_camera_fb_return(fb);
+
+  //Serial.println("<heap size after fb return>");  
+  //check_heap_free_size();
 
   return ESP_OK;
 }
@@ -182,26 +212,17 @@ void setup() {
 
   M5.Display.setFont(&fonts::efontJA_24);
   M5.Display.println("HelloWorld");
+  Serial.println("Hello World");
 
   camera_init();
 
 }
 
 void loop() {
-  //Serial.println("Hello World");  // Print text on the serial port.在串口输出文本
-
-#if 0   // Check free size of heap memory
-  Serial.printf("===============================================================\n");
-  Serial.printf("Mem Test\n");
-  Serial.printf("===============================================================\n");
-  Serial.printf("esp_get_free_heap_size()                              : %6d\n", esp_get_free_heap_size() );
-  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DMA)               : %6d\n", heap_caps_get_free_size(MALLOC_CAP_DMA) );
-  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_SPIRAM)            : %6d\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM) );
-  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_INTERNAL)          : %6d\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL) );
-  Serial.printf("heap_caps_get_free_size(MALLOC_CAP_DEFAULT)           : %6d\n", heap_caps_get_free_size(MALLOC_CAP_DEFAULT) );
-  delay(1000);          // Delay [ms]
-#endif
+  //check_heap_free_size();
 
   camera_capture_and_face_detect();
+
+  //delay(1000);          // Delay [ms]
 
 }
